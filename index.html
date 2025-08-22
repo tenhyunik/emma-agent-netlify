@@ -43,6 +43,53 @@
             }
         }
 
+        // Agent 자동 클릭으로 확대
+        function autoClickAgent() {
+            const agent = document.getElementById('did-agent');
+            if (agent) {
+                // Agent 내부의 클릭 가능한 요소들 찾기
+                const clickableElements = agent.querySelectorAll('div, button, iframe, *');
+                
+                clickableElements.forEach(element => {
+                    try {
+                        // 클릭 이벤트 발생
+                        element.click();
+                        
+                        // 마우스 이벤트도 시뮬레이션
+                        const mouseEvent = new MouseEvent('click', {
+                            view: window,
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        element.dispatchEvent(mouseEvent);
+                        
+                        console.log('자동 클릭 시도:', element.tagName);
+                    } catch (error) {
+                        // 에러 무시하고 계속
+                    }
+                });
+                
+                // iframe 내부도 클릭 시도
+                const iframes = agent.querySelectorAll('iframe');
+                iframes.forEach(iframe => {
+                    try {
+                        if (iframe.contentDocument) {
+                            const iframeElements = iframe.contentDocument.querySelectorAll('*');
+                            iframeElements.forEach(el => {
+                                try {
+                                    el.click();
+                                } catch (e) {}
+                            });
+                        }
+                    } catch (error) {
+                        console.log('iframe 클릭 제한:', error);
+                    }
+                });
+                
+                console.log('자동 클릭 완료');
+            }
+        }
+
         let checkCount = 0;
         const checkAgent = setInterval(() => {
             checkCount++;
@@ -51,6 +98,21 @@
             if (agent && agent.children.length > 0) {
                 console.log('Emma Agent 로드됨!');
                 clearInterval(checkAgent);
+                
+                // 1초 후 자동 클릭
+                setTimeout(() => {
+                    autoClickAgent();
+                }, 1000);
+                
+                // 3초 후 한 번 더 시도
+                setTimeout(() => {
+                    autoClickAgent();
+                }, 3000);
+                
+                // 5초 후 한 번 더 시도
+                setTimeout(() => {
+                    autoClickAgent();
+                }, 5000);
                 
                 sendToRN('agentReady', { agent: { name: 'Emma' } });
                 sendToRN('connectionStateChange', { state: 'connected' });
