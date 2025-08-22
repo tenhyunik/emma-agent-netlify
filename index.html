@@ -43,51 +43,154 @@
             }
         }
 
-        // Agent 자동 클릭으로 확대
-        function autoClickAgent() {
-            const agent = document.getElementById('did-agent');
-            if (agent) {
-                // Agent 내부의 클릭 가능한 요소들 찾기
-                const clickableElements = agent.querySelectorAll('div, button, iframe, *');
+        // 더 강력한 클릭 시뮬레이션
+        function simulateClick(element) {
+            if (!element) return false;
+            
+            try {
+                // 1. 일반 클릭
+                element.click();
                 
-                clickableElements.forEach(element => {
-                    try {
-                        // 클릭 이벤트 발생
-                        element.click();
-                        
-                        // 마우스 이벤트도 시뮬레이션
-                        const mouseEvent = new MouseEvent('click', {
-                            view: window,
-                            bubbles: true,
-                            cancelable: true
-                        });
-                        element.dispatchEvent(mouseEvent);
-                        
-                        console.log('자동 클릭 시도:', element.tagName);
-                    } catch (error) {
-                        // 에러 무시하고 계속
-                    }
+                // 2. 마우스 이벤트 시뮬레이션
+                const events = ['mousedown', 'mouseup', 'click'];
+                events.forEach(eventType => {
+                    const event = new MouseEvent(eventType, {
+                        view: window,
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: element.offsetLeft + element.offsetWidth / 2,
+                        clientY: element.offsetTop + element.offsetHeight / 2
+                    });
+                    element.dispatchEvent(event);
                 });
                 
-                // iframe 내부도 클릭 시도
-                const iframes = agent.querySelectorAll('iframe');
-                iframes.forEach(iframe => {
-                    try {
-                        if (iframe.contentDocument) {
-                            const iframeElements = iframe.contentDocument.querySelectorAll('*');
-                            iframeElements.forEach(el => {
-                                try {
-                                    el.click();
-                                } catch (e) {}
-                            });
-                        }
-                    } catch (error) {
-                        console.log('iframe 클릭 제한:', error);
-                    }
+                // 3. 터치 이벤트 시뮬레이션 (모바일용)
+                const touchEvents = ['touchstart', 'touchend'];
+                touchEvents.forEach(eventType => {
+                    const event = new TouchEvent(eventType, {
+                        bubbles: true,
+                        cancelable: true,
+                        touches: [{
+                            clientX: element.offsetLeft + element.offsetWidth / 2,
+                            clientY: element.offsetTop + element.offsetHeight / 2
+                        }]
+                    });
+                    element.dispatchEvent(event);
                 });
                 
-                console.log('자동 클릭 완료');
+                console.log('클릭 시뮬레이션 완료:', element.tagName, element.className);
+                return true;
+            } catch (error) {
+                console.log('클릭 시뮬레이션 실패:', error);
+                return false;
             }
+        }
+
+        // 1단계: Agent 확대 클릭
+        function expandAgent() {
+            console.log('🎯 1단계: Agent 확대 시도');
+            const agent = document.getElementById('did-agent');
+            if (!agent) return;
+            
+            // 가능한 모든 요소에 클릭 시도
+            const selectors = [
+                'div', 'button', 'span', 'img', 'video', 'canvas',
+                '[role="button"]', '[onclick]', '.clickable', '.expandable'
+            ];
+            
+            let clicked = false;
+            selectors.forEach(selector => {
+                const elements = agent.querySelectorAll(selector);
+                elements.forEach(element => {
+                    if (!clicked && element.offsetWidth > 0 && element.offsetHeight > 0) {
+                        if (simulateClick(element)) {
+                            clicked = true;
+                        }
+                    }
+                });
+            });
+            
+            // Agent 컨테이너 자체도 클릭
+            simulateClick(agent);
+            
+            console.log(clicked ? '✅ 확대 클릭 성공' : '❌ 확대 클릭 실패');
+        }
+
+        // 2단계: 전체화면 클릭
+        function enterFullscreen() {
+            console.log('🎯 2단계: 전체화면 시도');
+            const agent = document.getElementById('did-agent');
+            if (!agent) return;
+            
+            // 전체화면 버튼을 찾기 위한 여러 시도
+            const fullscreenSelectors = [
+                '[title*="fullscreen"]', '[title*="Fullscreen"]', '[title*="full screen"]',
+                '[aria-label*="fullscreen"]', '[aria-label*="Fullscreen"]',
+                '.fullscreen', '.full-screen', '.expand', '.maximize',
+                'button[type="button"]', 'div[role="button"]'
+            ];
+            
+            let clicked = false;
+            fullscreenSelectors.forEach(selector => {
+                if (clicked) return;
+                
+                const elements = agent.querySelectorAll(selector);
+                elements.forEach(element => {
+                    if (!clicked && element.offsetWidth > 0 && element.offsetHeight > 0) {
+                        // 전체화면 관련 키워드가 있는지 확인
+                        const text = element.textContent?.toLowerCase() || '';
+                        const title = element.title?.toLowerCase() || '';
+                        const ariaLabel = element.getAttribute('aria-label')?.toLowerCase() || '';
+                        
+                        if (text.includes('full') || title.includes('full') || ariaLabel.includes('full') ||
+                            element.className.includes('expand') || element.className.includes('full')) {
+                            if (simulateClick(element)) {
+                                clicked = true;
+                                console.log('✅ 전체화면 버튼 클릭 성공');
+                            }
+                        }
+                    }
+                });
+            });
+            
+            // 전체화면 API 직접 호출 시도
+            if (!clicked) {
+                try {
+                    if (agent.requestFullscreen) {
+                        agent.requestFullscreen();
+                        console.log('✅ 전체화면 API 호출 성공');
+                    } else if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen();
+                        console.log('✅ 문서 전체화면 API 호출 성공');
+                    }
+                } catch (error) {
+                    console.log('❌ 전체화면 API 실패:', error);
+                }
+            }
+        }
+
+        // 순차적 자동 클릭 실행
+        function performAutoClicks() {
+            console.log('🚀 자동 클릭 시퀀스 시작');
+            
+            // 1단계: Agent 확대 (1초 후)
+            setTimeout(() => {
+                expandAgent();
+                
+                // 2단계: 전체화면 (3초 후)
+                setTimeout(() => {
+                    enterFullscreen();
+                    
+                    // 3단계: 한 번 더 시도 (5초 후)
+                    setTimeout(() => {
+                        console.log('🔄 재시도');
+                        expandAgent();
+                        setTimeout(enterFullscreen, 1000);
+                    }, 2000);
+                    
+                }, 2000);
+                
+            }, 1000);
         }
 
         let checkCount = 0;
@@ -99,20 +202,8 @@
                 console.log('Emma Agent 로드됨!');
                 clearInterval(checkAgent);
                 
-                // 1초 후 자동 클릭
-                setTimeout(() => {
-                    autoClickAgent();
-                }, 1000);
-                
-                // 3초 후 한 번 더 시도
-                setTimeout(() => {
-                    autoClickAgent();
-                }, 3000);
-                
-                // 5초 후 한 번 더 시도
-                setTimeout(() => {
-                    autoClickAgent();
-                }, 5000);
+                // 자동 클릭 시퀀스 시작
+                performAutoClicks();
                 
                 sendToRN('agentReady', { agent: { name: 'Emma' } });
                 sendToRN('connectionStateChange', { state: 'connected' });
