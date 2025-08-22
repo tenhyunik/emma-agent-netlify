@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
-    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
     <title>Emma Agent</title>
     <style>
         body {
@@ -32,8 +30,79 @@
             src="https://agent.d-id.com/v2/index.js"
             data-client-key="Z29vZ2xlLW9hdXRoMnwxMDExMDI5MTI1NDM4MzA1NjMwOTM6bFdfNGJaSHcxVkhDaE1RWTdOZjlf"
             data-agent-id="v2_agt_nTeMhzHR"
-            data-name="did-agent"
-            crossorigin="anonymous">
+            data-name="did-agent">
+    </script>
+
+    <script>
+        // React Native 메시지 전송 함수
+        function sendToRN(type, data) {
+            try {
+                if (window.ReactNativeWebView) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ type, data }));
+                    console.log('RN 메시지 전송:', type);
+                }
+            } catch (error) {
+                console.log('RN 메시지 전송 실패:', error);
+            }
+        }
+
+        // Agent 로드 확인
+        let checkCount = 0;
+        const checkAgent = setInterval(() => {
+            checkCount++;
+            const agent = document.getElementById('did-agent');
+            
+            if (agent && agent.children.length > 0) {
+                console.log('Emma Agent 로드됨!');
+                clearInterval(checkAgent);
+                
+                // React Native에 연결 알림
+                sendToRN('agentReady', { agent: { name: 'Emma' } });
+                sendToRN('connectionStateChange', { state: 'connected' });
+                
+                // 3초 후 환영 메시지
+                setTimeout(() => {
+                    sendToRN('newMessage', {
+                        messages: [{ 
+                            role: 'assistant', 
+                            content: 'Hi! I\'m Emma, your AI English tutor. Ready to practice English together?' 
+                        }]
+                    });
+                }, 3000);
+                
+            } else if (checkCount > 20) {
+                console.log('Agent 로드 실패');
+                clearInterval(checkAgent);
+                sendToRN('agentError', { error: 'Failed to load Emma Agent' });
+            }
+        }, 1000);
+
+        // React Native 메시지 리스너
+        window.addEventListener('message', function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('RN에서 메시지 수신:', data.action);
+                
+                switch (data.action) {
+                    case 'chat':
+                        console.log('채팅 메시지:', data.message);
+                        // Agent에게 메시지 전송 시뮬레이션
+                        setTimeout(() => {
+                            sendToRN('newMessage', {
+                                messages: [{ 
+                                    role: 'assistant', 
+                                    content: 'Great! Let\'s practice English together!' 
+                                }]
+                            });
+                        }, 1500);
+                        break;
+                }
+            } catch (error) {
+                console.log('메시지 처리 오류:', error);
+            }
+        });
+
+        console.log('Emma Agent 초기화 중...');
     </script>
 </body>
 </html>
