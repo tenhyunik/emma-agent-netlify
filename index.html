@@ -9,19 +9,16 @@
             margin: 0;
             padding: 0;
             height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             overflow: hidden;
         }
         .iframe-container {
             width: 100%;
             height: 100vh;
-            position: relative;
         }
         #emma-iframe {
             width: 100%;
             height: 100%;
             border: none;
-            background: transparent;
         }
     </style>
 </head>
@@ -29,10 +26,10 @@
     <div class="iframe-container">
         <iframe 
             id="emma-iframe"
-            src="https://agents.d-id.com/embed/v2_agt_nTeMhzHR?key=Z29vZ2xlLW9hdXRoMnwxMDExMDI5MTI1NDM4MzA1NjMwOTM6bFdfNGJaSHcxVkhDaE1RWTdOZjlf&width=100%&height=100%&fullscreen=true"
+            src="https://studio.d-id.com/agents/share?id=v2_agt_VQQR1oql&utm_source=copy&key=WjI5dloyeGxMVzloZFhWb01ud3hNREV4TURJNU1USTFORE00TXpBMU5qTXdPVE02YkZkZk5HSmFTSGN4VmtoRGFFMVJXVGRPWmpsZg=="
             frameborder="0"
             allowfullscreen
-            allow="microphone; camera; fullscreen">
+            allow="microphone; camera; fullscreen; autoplay">
         </iframe>
     </div>
 
@@ -48,15 +45,14 @@
             }
         }
 
-        // iframe 로드 확인
         const iframe = document.getElementById('emma-iframe');
         
         iframe.onload = function() {
-            console.log('✅ Emma iframe 로드 완료');
+            console.log('✅ Emma 공유 링크 로드 완료');
             
             setTimeout(() => {
                 sendToRN('agentReady', { 
-                    agent: { name: 'Emma', method: 'iframe' } 
+                    agent: { name: 'Emma', method: 'share_link' } 
                 });
                 sendToRN('connectionStateChange', { state: 'connected' });
                 
@@ -65,7 +61,7 @@
                     sendToRN('newMessage', {
                         messages: [{ 
                             role: 'assistant', 
-                            content: 'Hi! I\'m Emma, your AI English tutor from D-ID iframe. Ready to practice English?' 
+                            content: 'Hi! I\'m Emma from D-ID share link. Ready to chat?' 
                         }]
                     });
                 }, 2000);
@@ -74,8 +70,8 @@
         };
 
         iframe.onerror = function() {
-            console.log('❌ Emma iframe 로드 실패');
-            sendToRN('agentError', { error: 'iframe load failed' });
+            console.log('❌ Emma 공유 링크 로드 실패');
+            sendToRN('agentError', { error: 'Share link load failed' });
         };
 
         // React Native 메시지 리스너
@@ -86,33 +82,12 @@
                 
                 switch (data.action) {
                     case 'chat':
-                        console.log('채팅 메시지 iframe으로 전달:', data.message);
-                        
+                        console.log('채팅 메시지:', data.message);
                         // iframe에 메시지 전달 시도
                         if (iframe.contentWindow) {
                             iframe.contentWindow.postMessage({
-                                type: 'chat',
-                                message: data.message
-                            }, '*');
-                        }
-                        
-                        // 시뮬레이션 응답
-                        setTimeout(() => {
-                            sendToRN('newMessage', {
-                                messages: [{ 
-                                    role: 'assistant', 
-                                    content: 'Great question! Let me help you practice English with that.' 
-                                }]
-                            });
-                        }, 1500);
-                        break;
-                        
-                    case 'speak':
-                        console.log('발화 요청:', data.text);
-                        if (iframe.contentWindow) {
-                            iframe.contentWindow.postMessage({
-                                type: 'speak',
-                                text: data.text
+                                type: 'message',
+                                content: data.message
                             }, '*');
                         }
                         break;
@@ -122,24 +97,7 @@
             }
         });
 
-        // iframe에서 오는 메시지 수신
-        window.addEventListener('message', function(event) {
-            if (event.source === iframe.contentWindow) {
-                console.log('iframe에서 메시지 수신:', event.data);
-                
-                // iframe에서 오는 Agent 메시지를 React Native로 전달
-                if (event.data.type === 'agentMessage') {
-                    sendToRN('newMessage', {
-                        messages: [{ 
-                            role: 'assistant', 
-                            content: event.data.content 
-                        }]
-                    });
-                }
-            }
-        });
-
-        console.log('Emma iframe Agent 초기화');
+        console.log('Emma 공유 링크 로딩 중...');
     </script>
 </body>
 </html>
