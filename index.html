@@ -10,60 +10,136 @@
             padding: 0;
             height: 100vh;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            overflow: hidden;
         }
-        #did-agent {
-            width: 100% !important;
-            height: 100% !important;
+        .iframe-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+        #emma-iframe {
+            width: 100%;
+            height: 100%;
             border: none;
+            background: transparent;
         }
     </style>
 </head>
 <body>
-    <div id="did-agent"></div>
-
-    <script type="module"
-            src="https://agent.d-id.com/v2/index.js"
-            data-client-key="Z29vZ2xlLW9hdXRoMnwxMDExMDI5MTI1NDM4MzA1NjMwOTM6bFdfNGJaSHcxVkhDaE1RWTdOZjlf"
-            data-agent-id="v2_agt_nTeMhzHR"
-            data-name="did-agent"
-            data-size="large"
-            data-width="100%"
-            data-height="100%"
-            data-expanded="true"
-            data-fullscreen="true"
-            data-auto-expand="true"
-            data-default-view="expanded"
-            data-widget-size="large"
-            data-presentation-mode="fullscreen">
-    </script>
+    <div class="iframe-container">
+        <iframe 
+            id="emma-iframe"
+            src="https://agents.d-id.com/embed/v2_agt_nTeMhzHR?key=Z29vZ2xlLW9hdXRoMnwxMDExMDI5MTI1NDM4MzA1NjMwOTM6bFdfNGJaSHcxVkhDaE1RWTdOZjlf&width=100%&height=100%&fullscreen=true"
+            frameborder="0"
+            allowfullscreen
+            allow="microphone; camera; fullscreen">
+        </iframe>
+    </div>
 
     <script>
         function sendToRN(type, data) {
             try {
                 if (window.ReactNativeWebView) {
                     window.ReactNativeWebView.postMessage(JSON.stringify({ type, data }));
+                    console.log('RN 메시지 전송:', type);
                 }
             } catch (error) {
                 console.log('RN 메시지 전송 실패:', error);
             }
         }
 
-        setTimeout(() => {
-            const agent = document.getElementById('did-agent');
-            if (agent && agent.innerHTML.length > 100) {
-                console.log('✅ Agent 로드됨');
-                sendToRN('agentReady', { agent: { name: 'Emma' } });
+        // iframe 로드 확인
+        const iframe = document.getElementById('emma-iframe');
+        
+        iframe.onload = function() {
+            console.log('✅ Emma iframe 로드 완료');
+            
+            setTimeout(() => {
+                sendToRN('agentReady', { 
+                    agent: { name: 'Emma', method: 'iframe' } 
+                });
                 sendToRN('connectionStateChange', { state: 'connected' });
-            } else {
-                console.log('❌ Agent 로드 실패');
-                sendToRN('agentError', { error: 'Agent load failed' });
-            }
-        }, 5000);
+                
+                // 환영 메시지
+                setTimeout(() => {
+                    sendToRN('newMessage', {
+                        messages: [{ 
+                            role: 'assistant', 
+                            content: 'Hi! I\'m Emma, your AI English tutor from D-ID iframe. Ready to practice English?' 
+                        }]
+                    });
+                }, 2000);
+                
+            }, 1000);
+        };
 
-        console.log('Emma Agent 초기화');
+        iframe.onerror = function() {
+            console.log('❌ Emma iframe 로드 실패');
+            sendToRN('agentError', { error: 'iframe load failed' });
+        };
+
+        // React Native 메시지 리스너
+        window.addEventListener('message', function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('RN에서 메시지 수신:', data.action);
+                
+                switch (data.action) {
+                    case 'chat':
+                        console.log('채팅 메시지 iframe으로 전달:', data.message);
+                        
+                        // iframe에 메시지 전달 시도
+                        if (iframe.contentWindow) {
+                            iframe.contentWindow.postMessage({
+                                type: 'chat',
+                                message: data.message
+                            }, '*');
+                        }
+                        
+                        // 시뮬레이션 응답
+                        setTimeout(() => {
+                            sendToRN('newMessage', {
+                                messages: [{ 
+                                    role: 'assistant', 
+                                    content: 'Great question! Let me help you practice English with that.' 
+                                }]
+                            });
+                        }, 1500);
+                        break;
+                        
+                    case 'speak':
+                        console.log('발화 요청:', data.text);
+                        if (iframe.contentWindow) {
+                            iframe.contentWindow.postMessage({
+                                type: 'speak',
+                                text: data.text
+                            }, '*');
+                        }
+                        break;
+                }
+            } catch (error) {
+                console.log('메시지 처리 오류:', error);
+            }
+        });
+
+        // iframe에서 오는 메시지 수신
+        window.addEventListener('message', function(event) {
+            if (event.source === iframe.contentWindow) {
+                console.log('iframe에서 메시지 수신:', event.data);
+                
+                // iframe에서 오는 Agent 메시지를 React Native로 전달
+                if (event.data.type === 'agentMessage') {
+                    sendToRN('newMessage', {
+                        messages: [{ 
+                            role: 'assistant', 
+                            content: event.data.content 
+                        }]
+                    });
+                }
+            }
+        });
+
+        console.log('Emma iframe Agent 초기화');
     </script>
 </body>
 </html>
