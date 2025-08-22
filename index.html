@@ -36,218 +36,86 @@
             try {
                 if (window.ReactNativeWebView) {
                     window.ReactNativeWebView.postMessage(JSON.stringify({ type, data }));
-                    console.log('RN 메시지 전송:', type);
                 }
             } catch (error) {
                 console.log('RN 메시지 전송 실패:', error);
             }
         }
 
-        // 더 강력한 클릭 시뮬레이션
-        function simulateClick(element) {
-            if (!element) return false;
+        // 가장 간단한 클릭 함수
+        function clickAgent() {
+            console.log('🎯 Agent 클릭 시도');
             
-            try {
-                // 1. 일반 클릭
-                element.click();
-                
-                // 2. 마우스 이벤트 시뮬레이션
-                const events = ['mousedown', 'mouseup', 'click'];
-                events.forEach(eventType => {
-                    const event = new MouseEvent(eventType, {
-                        view: window,
-                        bubbles: true,
-                        cancelable: true,
-                        clientX: element.offsetLeft + element.offsetWidth / 2,
-                        clientY: element.offsetTop + element.offsetHeight / 2
-                    });
-                    element.dispatchEvent(event);
-                });
-                
-                // 3. 터치 이벤트 시뮬레이션 (모바일용)
-                const touchEvents = ['touchstart', 'touchend'];
-                touchEvents.forEach(eventType => {
-                    const event = new TouchEvent(eventType, {
-                        bubbles: true,
-                        cancelable: true,
-                        touches: [{
-                            clientX: element.offsetLeft + element.offsetWidth / 2,
-                            clientY: element.offsetTop + element.offsetHeight / 2
-                        }]
-                    });
-                    element.dispatchEvent(event);
-                });
-                
-                console.log('클릭 시뮬레이션 완료:', element.tagName, element.className);
-                return true;
-            } catch (error) {
-                console.log('클릭 시뮬레이션 실패:', error);
-                return false;
+            // 1. Agent 컨테이너 직접 클릭
+            const agent = document.getElementById('did-agent');
+            if (agent) {
+                agent.click();
+                console.log('Agent 컨테이너 클릭');
             }
-        }
-
-        // 1단계: Agent 확대 클릭
-        function expandAgent() {
-            console.log('🎯 1단계: Agent 확대 시도');
-            const agent = document.getElementById('did-agent');
-            if (!agent) return;
             
-            // 가능한 모든 요소에 클릭 시도
-            const selectors = [
-                'div', 'button', 'span', 'img', 'video', 'canvas',
-                '[role="button"]', '[onclick]', '.clickable', '.expandable'
-            ];
-            
-            let clicked = false;
-            selectors.forEach(selector => {
-                const elements = agent.querySelectorAll(selector);
-                elements.forEach(element => {
-                    if (!clicked && element.offsetWidth > 0 && element.offsetHeight > 0) {
-                        if (simulateClick(element)) {
-                            clicked = true;
-                        }
-                    }
-                });
-            });
-            
-            // Agent 컨테이너 자체도 클릭
-            simulateClick(agent);
-            
-            console.log(clicked ? '✅ 확대 클릭 성공' : '❌ 확대 클릭 실패');
-        }
-
-        // 2단계: 전체화면 클릭
-        function enterFullscreen() {
-            console.log('🎯 2단계: 전체화면 시도');
-            const agent = document.getElementById('did-agent');
-            if (!agent) return;
-            
-            // 전체화면 버튼을 찾기 위한 여러 시도
-            const fullscreenSelectors = [
-                '[title*="fullscreen"]', '[title*="Fullscreen"]', '[title*="full screen"]',
-                '[aria-label*="fullscreen"]', '[aria-label*="Fullscreen"]',
-                '.fullscreen', '.full-screen', '.expand', '.maximize',
-                'button[type="button"]', 'div[role="button"]'
-            ];
-            
-            let clicked = false;
-            fullscreenSelectors.forEach(selector => {
-                if (clicked) return;
-                
-                const elements = agent.querySelectorAll(selector);
-                elements.forEach(element => {
-                    if (!clicked && element.offsetWidth > 0 && element.offsetHeight > 0) {
-                        // 전체화면 관련 키워드가 있는지 확인
-                        const text = element.textContent?.toLowerCase() || '';
-                        const title = element.title?.toLowerCase() || '';
-                        const ariaLabel = element.getAttribute('aria-label')?.toLowerCase() || '';
-                        
-                        if (text.includes('full') || title.includes('full') || ariaLabel.includes('full') ||
-                            element.className.includes('expand') || element.className.includes('full')) {
-                            if (simulateClick(element)) {
-                                clicked = true;
-                                console.log('✅ 전체화면 버튼 클릭 성공');
-                            }
-                        }
-                    }
-                });
-            });
-            
-            // 전체화면 API 직접 호출 시도
-            if (!clicked) {
-                try {
-                    if (agent.requestFullscreen) {
-                        agent.requestFullscreen();
-                        console.log('✅ 전체화면 API 호출 성공');
-                    } else if (document.documentElement.requestFullscreen) {
-                        document.documentElement.requestFullscreen();
-                        console.log('✅ 문서 전체화면 API 호출 성공');
-                    }
-                } catch (error) {
-                    console.log('❌ 전체화면 API 실패:', error);
+            // 2. 화면 전체에서 클릭 가능한 모든 요소 클릭
+            const allElements = document.querySelectorAll('*');
+            allElements.forEach((element, index) => {
+                if (index < 50) { // 처음 50개만 시도
+                    try {
+                        element.click();
+                    } catch (e) {}
                 }
-            }
-        }
-
-        // 순차적 자동 클릭 실행
-        function performAutoClicks() {
-            console.log('🚀 자동 클릭 시퀀스 시작');
+            });
             
-            // 1단계: Agent 확대 (1초 후)
-            setTimeout(() => {
-                expandAgent();
-                
-                // 2단계: 전체화면 (3초 후)
-                setTimeout(() => {
-                    enterFullscreen();
-                    
-                    // 3단계: 한 번 더 시도 (5초 후)
-                    setTimeout(() => {
-                        console.log('🔄 재시도');
-                        expandAgent();
-                        setTimeout(enterFullscreen, 1000);
-                    }, 2000);
-                    
-                }, 2000);
-                
-            }, 1000);
+            // 3. 좌표 기반 클릭 (우하단)
+            const clickEvent = new MouseEvent('click', {
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                clientX: window.innerWidth - 200,
+                clientY: window.innerHeight - 200
+            });
+            document.dispatchEvent(clickEvent);
+            
+            console.log('✅ 클릭 시도 완료');
         }
 
-        let checkCount = 0;
-        const checkAgent = setInterval(() => {
-            checkCount++;
+        // Agent 로드 감지 및 자동 클릭
+        let attempts = 0;
+        const checkAndClick = setInterval(() => {
+            attempts++;
+            console.log(`체크 시도 ${attempts}`);
+            
             const agent = document.getElementById('did-agent');
-            
             if (agent && agent.children.length > 0) {
-                console.log('Emma Agent 로드됨!');
-                clearInterval(checkAgent);
+                console.log('✅ Agent 발견! 클릭 시작');
                 
-                // 자동 클릭 시퀀스 시작
-                performAutoClicks();
+                // 즉시 클릭
+                clickAgent();
+                
+                // 1초 후 다시 클릭
+                setTimeout(clickAgent, 1000);
+                
+                // 3초 후 다시 클릭
+                setTimeout(clickAgent, 3000);
+                
+                // 5초 후 다시 클릭
+                setTimeout(clickAgent, 5000);
+                
+                clearInterval(checkAndClick);
                 
                 sendToRN('agentReady', { agent: { name: 'Emma' } });
                 sendToRN('connectionStateChange', { state: 'connected' });
                 
-                setTimeout(() => {
-                    sendToRN('newMessage', {
-                        messages: [{ 
-                            role: 'assistant', 
-                            content: 'Hi! I\'m Emma, your AI English tutor. Ready to practice English together?' 
-                        }]
-                    });
-                }, 3000);
-                
-            } else if (checkCount > 20) {
-                console.log('Agent 로드 실패');
-                clearInterval(checkAgent);
-                sendToRN('agentError', { error: 'Failed to load Emma Agent' });
+            } else if (attempts > 30) {
+                console.log('❌ Agent 로드 실패');
+                clearInterval(checkAndClick);
+                sendToRN('agentError', { error: 'Agent load timeout' });
             }
         }, 1000);
 
-        window.addEventListener('message', function(event) {
-            try {
-                const data = JSON.parse(event.data);
-                console.log('RN에서 메시지 수신:', data.action);
-                
-                switch (data.action) {
-                    case 'chat':
-                        console.log('채팅 메시지:', data.message);
-                        setTimeout(() => {
-                            sendToRN('newMessage', {
-                                messages: [{ 
-                                    role: 'assistant', 
-                                    content: 'Great! Let\'s practice English together!' 
-                                }]
-                            });
-                        }, 1500);
-                        break;
-                }
-            } catch (error) {
-                console.log('메시지 처리 오류:', error);
-            }
-        });
+        // 페이지 로드 후에도 주기적으로 클릭
+        setTimeout(() => {
+            setInterval(clickAgent, 10000); // 10초마다 클릭
+        }, 10000);
 
-        console.log('Emma Agent 초기화 중...');
+        console.log('Emma Agent 초기화 시작');
     </script>
 </body>
 </html>
