@@ -15,11 +15,26 @@
             align-items: center;
         }
         #did-agent {
-            width: 100%;
-            height: 100%;
-            max-width: 500px;
-            max-height: 600px;
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
             border: none;
+            transform: scale(1) !important;
+        }
+        /* D-ID Agent 내부 요소들 강제로 크게 만들기 */
+        #did-agent > * {
+            width: 100% !important;
+            height: 100% !important;
+            transform: scale(1) !important;
+        }
+        /* Agent 위젯 자동 확장 */
+        #did-agent iframe,
+        #did-agent video,
+        #did-agent canvas {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
         }
     </style>
 </head>
@@ -30,11 +45,12 @@
             src="https://agent.d-id.com/v2/index.js"
             data-client-key="Z29vZ2xlLW9hdXRoMnwxMDExMDI5MTI1NDM4MzA1NjMwOTM6bFdfNGJaSHcxVkhDaE1RWTdOZjlf"
             data-agent-id="v2_agt_nTeMhzHR"
-            data-name="did-agent">
+            data-name="did-agent"
+            data-mode="fullscreen">
     </script>
 
     <script>
-        // React Native 메시지 전송 함수
+        // 기존 JavaScript 코드는 그대로 유지...
         function sendToRN(type, data) {
             try {
                 if (window.ReactNativeWebView) {
@@ -46,7 +62,7 @@
             }
         }
 
-        // Agent 로드 확인
+        // Agent 로드 후 강제로 크게 만들기
         let checkCount = 0;
         const checkAgent = setInterval(() => {
             checkCount++;
@@ -56,11 +72,15 @@
                 console.log('Emma Agent 로드됨!');
                 clearInterval(checkAgent);
                 
+                // 강제로 크기 조정
+                agent.style.width = '100%';
+                agent.style.height = '100%';
+                agent.style.transform = 'scale(1)';
+                
                 // React Native에 연결 알림
                 sendToRN('agentReady', { agent: { name: 'Emma' } });
                 sendToRN('connectionStateChange', { state: 'connected' });
                 
-                // 3초 후 환영 메시지
                 setTimeout(() => {
                     sendToRN('newMessage', {
                         messages: [{ 
@@ -77,7 +97,7 @@
             }
         }, 1000);
 
-        // React Native 메시지 리스너
+        // 나머지 JavaScript 코드는 동일...
         window.addEventListener('message', function(event) {
             try {
                 const data = JSON.parse(event.data);
@@ -86,7 +106,6 @@
                 switch (data.action) {
                     case 'chat':
                         console.log('채팅 메시지:', data.message);
-                        // Agent에게 메시지 전송 시뮬레이션
                         setTimeout(() => {
                             sendToRN('newMessage', {
                                 messages: [{ 
