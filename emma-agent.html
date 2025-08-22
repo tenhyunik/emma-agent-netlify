@@ -1,0 +1,551 @@
+// getAgentHTML() 함수를 D-ID Agents SDK 방식으로 완전히 교체
+
+const getAgentHTML = () => {
+  const agentId = EMMA_AGENT_CONFIG.agentId;
+  const clientKey = EMMA_AGENT_CONFIG.clientKey;
+  
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="https://react-native-webview.local/">
+    <title>Emma Agent with D-ID SDK</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .emma-container {
+            text-align: center;
+            color: white;
+            position: relative;
+            z-index: 2;
+        }
+        .video-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            margin: 0 auto 30px;
+            border-radius: 50%;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+        }
+        #videoElement {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .emma-name {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .emma-status {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 30px;
+            min-height: 22px;
+        }
+        .speech-bubble {
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            padding: 25px 35px;
+            border-radius: 30px;
+            margin: 20px auto;
+            max-width: 400px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s ease;
+            position: relative;
+            font-size: 16px;
+            line-height: 1.4;
+        }
+        .speech-bubble.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 15px solid rgba(255,255,255,0.95);
+        }
+        .loading {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            color: rgba(255,255,255,0.9);
+            font-size: 14px;
+            background: rgba(0,0,0,0.4);
+            padding: 12px 18px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .debug {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            color: white;
+            font-size: 11px;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 15px;
+            border-radius: 10px;
+            max-width: 250px;
+            word-wrap: break-word;
+            font-family: monospace;
+            backdrop-filter: blur(10px);
+        }
+        .audio-controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.1);
+            padding: 15px 25px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .volume-slider {
+            width: 100px;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .speaking {
+            animation: speak 0.5s ease-in-out infinite alternate;
+            transform: scale(1.05);
+            box-shadow: 0 0 50px rgba(255,107,107,0.5);
+        }
+        
+        @keyframes speak {
+            0% { transform: scale(1.05); }
+            100% { transform: scale(1.08); box-shadow: 0 0 60px rgba(255,107,107,0.6); }
+        }
+    </style>
+</head>
+<body>
+    <div id="debugDiv" class="debug">
+        Emma SDK 초기화 중...
+    </div>
+    
+    <div id="loadingDiv" class="loading">
+        🎭 Emma Agent 연결 중...
+    </div>
+    
+    <div class="emma-container">
+        <div class="video-container">
+            <video id="videoElement" autoplay muted playsinline></video>
+            <div class="video-overlay"></div>
+        </div>
+        <div class="emma-name">Emma</div>
+        <div id="emmaStatus" class="emma-status">English Tutor from San Francisco</div>
+        <div id="speechBubble" class="speech-bubble">
+            Hi! I'm Emma, your AI English tutor. Ready to practice? 😊
+        </div>
+        
+        <div class="audio-controls">
+            <div class="volume-control">
+                <span>🔊</span>
+                <input type="range" id="volumeSlider" class="volume-slider" min="0" max="1" step="0.1" value="0.8">
+                <span id="volumeValue">80%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- D-ID Agents SDK -->
+    <script src="https://unpkg.com/@d-id/client-sdk@0.7.3/dist/d-id.min.js"></script>
+
+    <script>
+        // 요소들
+        const videoElement = document.getElementById('videoElement');
+        const emmaStatus = document.getElementById('emmaStatus');
+        const speechBubble = document.getElementById('speechBubble');
+        const loadingDiv = document.getElementById('loadingDiv');
+        const debugDiv = document.getElementById('debugDiv');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const volumeValue = document.getElementById('volumeValue');
+
+        // 상태
+        let agentManager = null;
+        let srcObject = null;
+        let isConnected = false;
+        let isSpeaking = false;
+        let messageCount = 0;
+
+        // Agent 설정
+        const agentId = '${agentId}';
+        const auth = { 
+            type: 'key', 
+            clientKey: '${clientKey}' 
+        };
+
+        // 볼륨 컨트롤
+        volumeSlider.addEventListener('input', (e) => {
+            const volume = parseFloat(e.target.value);
+            if (videoElement) {
+                videoElement.volume = volume;
+            }
+            volumeValue.textContent = Math.round(volume * 100) + '%';
+        });
+
+        // React Native로 메시지 전송
+        function sendMessageToRN(type, data) {
+            try {
+                if (window.ReactNativeWebView) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                        type: type,
+                        data: data
+                    }));
+                }
+            } catch (error) {
+                debugLog('메시지 전송 실패: ' + error);
+            }
+        }
+
+        // 디버그 함수
+        function debugLog(message) {
+            console.log('[Emma SDK] ' + message);
+            if (debugDiv) {
+                debugDiv.textContent = message;
+            }
+        }
+
+        // 말풍선 표시
+        function showSpeechBubble(text) {
+            speechBubble.textContent = text;
+            speechBubble.classList.add('show');
+            
+            setTimeout(() => {
+                speechBubble.classList.remove('show');
+            }, 5000);
+        }
+
+        // SDK 콜백 함수들
+        const callbacks = {
+            // 필수 콜백: 비디오 스트림 연결
+            onSrcObjectReady(value) {
+                debugLog('비디오 스트림 준비됨');
+                videoElement.srcObject = value;
+                srcObject = value;
+                
+                sendMessageToRN('srcObjectReady', { hasStream: !!value });
+                return srcObject;
+            },
+
+            // 비디오 상태 변경
+            onVideoStateChange(state) {
+                debugLog('비디오 상태: ' + state);
+                
+                if (state === "STOP") {
+                    isSpeaking = false;
+                    videoElement.classList.remove('speaking');
+                    emmaStatus.textContent = 'Listening...';
+                    
+                    // 정적 이미지로 전환
+                    if (agentManager && agentManager.agent && agentManager.agent.presenter.idle_video) {
+                        videoElement.srcObject = undefined;
+                        videoElement.src = agentManager.agent.presenter.idle_video;
+                    }
+                } else if (state === "PLAY") {
+                    isSpeaking = true;
+                    videoElement.classList.add('speaking');
+                    emmaStatus.textContent = 'Speaking...';
+                    
+                    // 스트림으로 전환
+                    videoElement.src = "";
+                    videoElement.srcObject = srcObject;
+                }
+                
+                sendMessageToRN('videoStateChange', { state: state });
+            },
+
+            // 연결 상태 변경
+            onConnectionStateChange(state) {
+                debugLog('연결 상태: ' + state);
+                
+                if (state === "connected") {
+                    isConnected = true;
+                    emmaStatus.textContent = 'Online';
+                    
+                    if (loadingDiv) {
+                        loadingDiv.style.display = 'none';
+                    }
+                    
+                    sendMessageToRN('connectionStateChange', { state: 'connected' });
+                    sendMessageToRN('agentReady', { 
+                        agent: agentManager.agent,
+                        starterMessages: agentManager.starterMessages 
+                    });
+                    
+                } else if (state === "connecting") {
+                    emmaStatus.textContent = 'Connecting...';
+                    sendMessageToRN('connectionStateChange', { state: 'connecting' });
+                    
+                } else if (state === "disconnected") {
+                    isConnected = false;
+                    emmaStatus.textContent = 'Disconnected';
+                    sendMessageToRN('connectionStateChange', { state: 'disconnected' });
+                    
+                } else if (state === "failed") {
+                    isConnected = false;
+                    emmaStatus.textContent = 'Connection Failed';
+                    sendMessageToRN('connectionStateChange', { state: 'failed' });
+                }
+            },
+
+            // 새 메시지 수신
+            onNewMessage(messages, type) {
+                debugLog('새 메시지 수신: ' + type);
+                
+                if (messages && messages.length > 0) {
+                    const lastMessage = messages[messages.length - 1];
+                    if (lastMessage.role === 'assistant' && lastMessage.content) {
+                        showSpeechBubble(lastMessage.content);
+                    }
+                }
+                
+                sendMessageToRN('newMessage', { messages: messages, type: type });
+            },
+
+            // 오류 처리
+            onError(error, errorData) {
+                debugLog('오류 발생: ' + error);
+                console.error('D-ID SDK 오류:', error, errorData);
+                
+                let userMessage = 'Emma와 연결에 문제가 있습니다.';
+                const errorStr = error.toString().toLowerCase();
+                
+                if (errorStr.includes('network') || errorStr.includes('connection')) {
+                    userMessage = '네트워크 연결을 확인해주세요.';
+                } else if (errorStr.includes('auth') || errorStr.includes('unauthorized')) {
+                    userMessage = 'Emma 인증에 문제가 있습니다.';
+                }
+                
+                sendMessageToRN('agentError', { 
+                    error: error.toString(),
+                    userMessage: userMessage
+                });
+            }
+        };
+
+        // 스트림 옵션
+        const streamOptions = {
+            compatibilityMode: "auto",
+            streamWarmup: true
+        };
+
+        // Emma Agent 초기화
+        async function initializeEmma() {
+            try {
+                debugLog('D-ID Agents SDK 초기화 시작');
+                
+                // Agent Manager 생성
+                agentManager = await DID.createAgentManager(agentId, { 
+                    auth, 
+                    callbacks, 
+                    streamOptions 
+                });
+                
+                debugLog('Agent Manager 생성 완료');
+                debugLog('Agent 정보: ' + agentManager.agent.preview_name);
+                
+                // Agent 연결
+                await agentManager.connect();
+                debugLog('Agent 연결 시도');
+                
+            } catch (error) {
+                debugLog('초기화 실패: ' + error);
+                console.error('Emma 초기화 오류:', error);
+                
+                sendMessageToRN('agentError', { 
+                    error: error.toString(),
+                    userMessage: 'Emma 연결에 실패했습니다. 다시 시도해주세요.'
+                });
+            }
+        }
+
+        // React Native에서 호출할 함수들
+        window.sendChatMessage = async function(message) {
+            try {
+                if (!agentManager || !isConnected) {
+                    throw new Error('Emma가 아직 준비되지 않았습니다.');
+                }
+                
+                debugLog('채팅 메시지 전송: ' + message.substring(0, 20) + '...');
+                messageCount++;
+                
+                const result = await agentManager.chat(message);
+                debugLog('채팅 응답 완료');
+                
+                return true;
+                
+            } catch (error) {
+                debugLog('채팅 실패: ' + error);
+                sendMessageToRN('agentError', { error: error.toString() });
+                return false;
+            }
+        };
+
+        window.speakText = async function(text) {
+            try {
+                if (!agentManager || !isConnected) {
+                    throw new Error('Emma가 아직 준비되지 않았습니다.');
+                }
+                
+                debugLog('텍스트 발화: ' + text.substring(0, 20) + '...');
+                
+                const result = await agentManager.speak({
+                    type: "text",
+                    input: text
+                });
+                
+                debugLog('발화 완료');
+                return true;
+                
+            } catch (error) {
+                debugLog('발화 실패: ' + error);
+                sendMessageToRN('agentError', { error: error.toString() });
+                return false;
+            }
+        };
+
+        window.disconnectAgent = async function() {
+            try {
+                if (agentManager) {
+                    debugLog('Agent 연결 해제');
+                    await agentManager.disconnect();
+                }
+                
+                isConnected = false;
+                messageCount = 0;
+                isSpeaking = false;
+                
+                videoElement.classList.remove('speaking');
+                emmaStatus.textContent = 'Disconnected';
+                speechBubble.classList.remove('show');
+                
+                sendMessageToRN('disconnected', {});
+                
+            } catch (error) {
+                debugLog('연결 해제 실패: ' + error);
+            }
+        };
+
+        window.reconnectAgent = async function() {
+            try {
+                if (agentManager) {
+                    debugLog('Agent 재연결');
+                    await agentManager.reconnect();
+                }
+            } catch (error) {
+                debugLog('재연결 실패: ' + error);
+                sendMessageToRN('agentError', { error: error.toString() });
+            }
+        };
+
+        window.getAgentInfo = function() {
+            return {
+                name: agentManager ? agentManager.agent.preview_name : 'Emma',
+                connected: isConnected,
+                messageCount: messageCount,
+                agentId: agentId
+            };
+        };
+
+        // React Native 메시지 리스너
+        window.addEventListener('message', function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                debugLog('RN 메시지: ' + data.action);
+                
+                switch (data.action) {
+                    case 'chat':
+                        window.sendChatMessage(data.message);
+                        break;
+                    case 'speak':
+                        window.speakText(data.text);
+                        break;
+                    case 'disconnect':
+                        window.disconnectAgent();
+                        break;
+                    case 'reconnect':
+                        window.reconnectAgent();
+                        break;
+                    case 'ping':
+                        sendMessageToRN('pong', { timestamp: Date.now() });
+                        break;
+                    default:
+                        debugLog('알 수 없는 액션: ' + data.action);
+                }
+            } catch (error) {
+                debugLog('메시지 처리 오류: ' + error);
+            }
+        });
+
+        // 초기화 시작
+        debugLog('Emma Agent 로딩 시작...');
+        
+        // D-ID SDK 로딩 확인 후 초기화
+        function checkSDKAndInit() {
+            if (typeof DID !== 'undefined' && DID.createAgentManager) {
+                debugLog('D-ID SDK 로딩 완료');
+                setTimeout(initializeEmma, 1000);
+            } else {
+                debugLog('D-ID SDK 로딩 대기 중...');
+                setTimeout(checkSDKAndInit, 500);
+            }
+        }
+        
+        checkSDKAndInit();
+        
+    </script>
+</body>
+</html>`;
+};
