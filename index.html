@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
     <title>Emma Agent</title>
     <style>
         body {
@@ -19,42 +21,19 @@
             height: 100%;
             max-width: 500px;
             max-height: 600px;
-        }
-        .loading {
-            color: white;
-            text-align: center;
-            font-family: Arial, sans-serif;
+            border: none;
         }
     </style>
 </head>
 <body>
-    <div class="loading" id="loading">Loading Emma Agent...</div>
-    <div id="did-agent" style="display: none;"></div>
+    <div id="did-agent"></div>
 
     <script type="module"
             src="https://agent.d-id.com/v2/index.js"
             data-client-key="Z29vZ2xlLW9hdXRoMnwxMDExMDI5MTI1NDM4MzA1NjMwOTM6bFdfNGJaSHcxVkhDaE1RWTdOZjlf"
             data-agent-id="v2_agt_nTeMhzHR"
             data-name="did-agent"
-            onload="document.getElementById('loading').style.display='none'; document.getElementById('did-agent').style.display='block';">
-    </script>
-
-    <script>
-        // React Native 메시지 전송
-        function sendToRN(type, data) {
-            if (window.ReactNativeWebView) {
-                window.ReactNativeWebView.postMessage(JSON.stringify({ type, data }));
-            }
-        }
-
-        // Agent 로드 확인
-        setTimeout(() => {
-            const agent = document.getElementById('did-agent');
-            if (agent && agent.children.length > 0) {
-                sendToRN('agentReady', { agent: { name: 'Emma' } });
-                sendToRN('connectionStateChange', { state: 'connected' });
-            }
-        }, 5000);
+            crossorigin="anonymous">
     </script>
 </body>
 </html>
