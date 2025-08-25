@@ -26,12 +26,9 @@
 
     <script type="module"
             src="https://agent.d-id.com/v2/index.js"
-            data-client-key="Z29vZ2xlLW9hdXRoMnwxMDExMDI5MTI1NDM4MzA1NjMwOTM6bFdfNGJaSHcxVkhDaE1RWTdOZjlf"
-            data-agent-id="v2_agt_nTeMhzHR"
-            data-name="did-agent"
-            data-output-resolution="1080"
-            data-stream-warmup="true"
-            data-compatibility-mode="auto">
+            data-client-key="Z29vZ2xlLW9hdXRoMnwxMDM1NTQ4MzI4NjIzMzUwMDk2Njg6M3htYkRaVlVZdmZCelphVVNCa2VV"
+            data-agent-id="v2_agt_RgX9LZSG"
+            data-name="did-agent">
     </script>
 
     <script>
@@ -39,26 +36,65 @@
             try {
                 if (window.ReactNativeWebView) {
                     window.ReactNativeWebView.postMessage(JSON.stringify({ type, data }));
+                    console.log('RN 메시지 전송:', type);
                 }
             } catch (error) {
                 console.log('RN 메시지 전송 실패:', error);
             }
         }
 
-        // Agent 로드 체크
-        setTimeout(() => {
+        let checkCount = 0;
+        const checkAgent = setInterval(() => {
+            checkCount++;
             const agent = document.getElementById('did-agent');
+            
             if (agent && agent.innerHTML.length > 100) {
-                console.log('✅ Agent 로드됨 - 1080p 해상도');
+                console.log('✅ Emma Agent 로드됨 (새 ID)');
+                clearInterval(checkAgent);
+                
                 sendToRN('agentReady', { agent: { name: 'Emma' } });
                 sendToRN('connectionStateChange', { state: 'connected' });
-            } else {
+                
+                setTimeout(() => {
+                    sendToRN('newMessage', {
+                        messages: [{ 
+                            role: 'assistant', 
+                            content: 'Hi! I\'m Emma, your AI English tutor. Ready to practice English together?' 
+                        }]
+                    });
+                }, 3000);
+                
+            } else if (checkCount > 20) {
                 console.log('❌ Agent 로드 실패');
-                sendToRN('agentError', { error: 'Agent load failed' });
+                clearInterval(checkAgent);
+                sendToRN('agentError', { error: 'Failed to load Emma Agent' });
             }
-        }, 5000);
+        }, 1000);
 
-        console.log('Emma Agent 초기화 - 고해상도 모드');
+        window.addEventListener('message', function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('RN에서 메시지 수신:', data.action);
+                
+                switch (data.action) {
+                    case 'chat':
+                        console.log('채팅 메시지:', data.message);
+                        setTimeout(() => {
+                            sendToRN('newMessage', {
+                                messages: [{ 
+                                    role: 'assistant', 
+                                    content: 'Great! Let\'s practice English together!' 
+                                }]
+                            });
+                        }, 1500);
+                        break;
+                }
+            } catch (error) {
+                console.log('메시지 처리 오류:', error);
+            }
+        });
+
+        console.log('Emma Agent 초기화 중 (새 Agent ID: v2_agt_RgX9LZSG)...');
     </script>
 </body>
 </html>
