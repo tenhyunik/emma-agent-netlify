@@ -40,7 +40,9 @@
             data-agent-id="v2_agt_RgX9LZSG"
             data-name="did-agent"
             data-fluent="true"
-            data-stream-warmup="true">
+            data-stream-warmup="true"
+            onload="console.log('D-ID SDK 스크립트 로드됨')"
+            onerror="console.error('D-ID SDK 로드 실패')">
     </script>
 
     <script>
@@ -55,18 +57,33 @@
             }
         }
 
+        // 더 강력한 Agent 연결 감지 및 디버깅
         let checkCount = 0;
         const checkAgent = setInterval(() => {
             checkCount++;
             const agent = document.getElementById('did-agent');
             
+            console.log(`[${checkCount}] Agent 상태 체크:`, {
+                element: !!agent,
+                innerHTML: agent?.innerHTML?.length || 0,
+                hasVideo: !!agent?.querySelector('video'),
+                hasIframe: !!agent?.querySelector('iframe'),
+                children: agent?.children?.length || 0
+            });
+            
             if (agent && agent.innerHTML.length > 100) {
-                console.log('✅ Emma Agent 로드됨 (CreatorUp 스타일)');
+                console.log('✅ Emma Agent 로드됨');
                 clearInterval(checkAgent);
+                
+                // Agent 내부 구조 확인
+                const videos = agent.querySelectorAll('video');
+                const iframes = agent.querySelectorAll('iframe');
+                console.log('Agent 내부:', { videos: videos.length, iframes: iframes.length });
                 
                 sendToRN('agentReady', { agent: { name: 'Emma' } });
                 sendToRN('connectionStateChange', { state: 'connected' });
                 
+                // 실제 Agent가 준비될 때까지 더 기다림
                 setTimeout(() => {
                     sendToRN('newMessage', {
                         messages: [{ 
@@ -74,23 +91,30 @@
                             content: 'Hi! I\'m Emma, your AI English tutor. Ready to practice English together?' 
                         }]
                     });
-                }, 3000);
+                }, 5000); // 5초로 증가
                 
-            } else if (checkCount > 20) {
-                console.log('❌ Agent 로드 실패');
+            } else if (checkCount > 30) { // 30초로 증가
+                console.log('❌ Agent 로드 실패 - 타임아웃');
+                console.log('최종 상태:', {
+                    element: !!agent,
+                    innerHTML: agent?.innerHTML || 'null',
+                    error: 'Timeout after 30 seconds'
+                });
                 clearInterval(checkAgent);
-                sendToRN('agentError', { error: 'Failed to load Emma Agent' });
+                sendToRN('agentError', { error: 'Failed to load Emma Agent - Timeout' });
             }
         }, 1000);
 
+        // RN에서 메시지 받기 위한 리스너 추가
         window.addEventListener('message', function(event) {
             try {
                 const data = JSON.parse(event.data);
-                console.log('RN에서 메시지 수신:', data.action);
+                console.log('RN에서 메시지 수신:', data.type || data.action);
                 
-                switch (data.action) {
+                switch (data.type || data.action) {
                     case 'chat':
                         console.log('채팅 메시지:', data.message);
+                        // 실제 D-ID Agent에게 메시지 전송하는 로직 추가 필요
                         setTimeout(() => {
                             sendToRN('newMessage', {
                                 messages: [{ 
@@ -99,6 +123,11 @@
                                 }]
                             });
                         }, 1500);
+                        break;
+                    case 'ENABLE_FLUENT_MODE':
+                        console.log('Fluent 모드 활성화 요청:', data.payload);
+                        // Fluent 모드가 이미 data 속성으로 설정되어 있음
+                        sendToRN('fluentStreamActive', { fluent: true });
                         break;
                 }
             } catch (error) {
