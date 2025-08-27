@@ -5,18 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Emma Agent</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
             margin: 0;
             padding: 0;
             height: 100vh;
+            width: 100vw;
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
+            background: #000;
         }
+        
         #did-agent {
+            width: 100vw !important;
+            height: 100vh !important;
+            border: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        /* 에이전트 내부 컨테이너가 있다면 전체 화면으로 확장 */
+        #did-agent > * {
             width: 100% !important;
             height: 100% !important;
-            border: none;
+        }
+        
+        /* 비디오 요소들도 전체 화면으로 */
+        video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
         }
     </style>
 </head>
@@ -46,14 +72,50 @@
             }
         }
 
+        // 전체 화면 강제 적용
+        function forceFullscreen() {
+            const agent = document.getElementById('did-agent');
+            if (agent) {
+                agent.style.width = '100vw';
+                agent.style.height = '100vh';
+                agent.style.position = 'absolute';
+                agent.style.top = '0';
+                agent.style.left = '0';
+                agent.style.zIndex = '1000';
+                
+                // 내부 요소들도 전체 화면으로
+                const videos = agent.querySelectorAll('video');
+                videos.forEach(video => {
+                    video.style.width = '100%';
+                    video.style.height = '100%';
+                    video.style.objectFit = 'cover';
+                });
+                
+                // 컨테이너 요소들도 전체 화면으로
+                const containers = agent.querySelectorAll('div');
+                containers.forEach(container => {
+                    if (container.id !== 'did-agent') {
+                        container.style.width = '100%';
+                        container.style.height = '100%';
+                    }
+                });
+            }
+        }
+
         let checkCount = 0;
         const checkAgent = setInterval(() => {
             checkCount++;
             const agent = document.getElementById('did-agent');
             
             if (agent && agent.innerHTML.length > 100) {
-                console.log('✅ Emma Agent 로드됨 (새 ID)');
+                console.log('✅ Emma Agent 로드됨 (전체화면 모드)');
                 clearInterval(checkAgent);
+                
+                // 전체화면 적용
+                forceFullscreen();
+                
+                // 주기적으로 전체화면 유지 확인
+                setInterval(forceFullscreen, 1000);
                 
                 sendToRN('agentReady', { agent: { name: 'Emma' } });
                 sendToRN('connectionStateChange', { state: 'connected' });
@@ -97,7 +159,10 @@
             }
         });
 
-        console.log('Emma Agent 초기화 중 (새 Agent ID: v2_agt_RgX9LZSG)...');
+        // 윈도우 리사이즈 시에도 전체화면 유지
+        window.addEventListener('resize', forceFullscreen);
+
+        console.log('Emma Agent 초기화 중 (전체화면 모드)...');
     </script>
 </body>
 </html>
