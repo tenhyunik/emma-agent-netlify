@@ -26,23 +26,55 @@
         #did-agent {
             width: 100vw !important;
             height: 100vh !important;
-            border: none;
-            position: absolute;
-            top: 0;
-            left: 0;
+            border: none !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            z-index: 1000 !important;
         }
         
-        /* 에이전트 내부 컨테이너가 있다면 전체 화면으로 확장 */
-        #did-agent > * {
-            width: 100% !important;
-            height: 100% !important;
+        /* D-ID SDK 내부 요소들 강제 스타일링 */
+        #did-agent * {
+            max-width: none !important;
+            max-height: none !important;
         }
         
-        /* 비디오 요소들도 전체 화면으로 */
-        video {
-            width: 100% !important;
-            height: 100% !important;
+        /* 에이전트 컨테이너 전체 화면 */
+        #did-agent > div,
+        #did-agent .did-agent-container,
+        #did-agent .agent-container,
+        #did-agent .video-container {
+            width: 100vw !important;
+            height: 100vh !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+        }
+        
+        /* 비디오 요소들 전체 화면 */
+        #did-agent video,
+        #did-agent .video-element,
+        #did-agent canvas {
+            width: 100vw !important;
+            height: 100vh !important;
             object-fit: cover !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+        }
+        
+        /* Thumbnail 모드 강제 해제 */
+        #did-agent .thumbnail,
+        #did-agent .preview,
+        #did-agent .agent-preview {
+            display: none !important;
+        }
+        
+        /* UI 컨트롤 숨기기 */
+        #did-agent .controls,
+        #did-agent .ui-controls,
+        #did-agent .agent-controls {
+            display: none !important;
         }
     </style>
 </head>
@@ -57,7 +89,10 @@
             data-name="did-agent"
             data-monitor="true"
             data-orientation="horizontal"
-            data-position="right">
+            data-position="right"
+            data-auto-start="true"
+            data-show-ui="false"
+            data-fullscreen="true">
     </script>
 
     <script>
@@ -72,31 +107,65 @@
             }
         }
 
-        // 전체 화면 강제 적용
+        // 전체 화면 강제 적용 + Thumbnail 모드 해제
         function forceFullscreen() {
             const agent = document.getElementById('did-agent');
             if (agent) {
-                agent.style.width = '100vw';
-                agent.style.height = '100vh';
-                agent.style.position = 'absolute';
-                agent.style.top = '0';
-                agent.style.left = '0';
-                agent.style.zIndex = '1000';
+                // 에이전트 컨테이너 전체화면
+                agent.style.cssText = `
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    position: absolute !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    z-index: 1000 !important;
+                    border: none !important;
+                `;
                 
-                // 내부 요소들도 전체 화면으로
-                const videos = agent.querySelectorAll('video');
-                videos.forEach(video => {
-                    video.style.width = '100%';
-                    video.style.height = '100%';
-                    video.style.objectFit = 'cover';
+                // 모든 하위 컨테이너 전체화면
+                const containers = agent.querySelectorAll('div, section, main');
+                containers.forEach(container => {
+                    container.style.cssText = `
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        max-width: none !important;
+                        max-height: none !important;
+                    `;
                 });
                 
-                // 컨테이너 요소들도 전체 화면으로
-                const containers = agent.querySelectorAll('div');
-                containers.forEach(container => {
-                    if (container.id !== 'did-agent') {
-                        container.style.width = '100%';
-                        container.style.height = '100%';
+                // 비디오 요소들 전체화면
+                const videos = agent.querySelectorAll('video, canvas');
+                videos.forEach(video => {
+                    video.style.cssText = `
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        object-fit: cover !important;
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                    `;
+                });
+                
+                // Thumbnail 관련 요소들 숨기기
+                const thumbnails = agent.querySelectorAll('.thumbnail, .preview, .agent-preview, .controls, .ui-controls');
+                thumbnails.forEach(thumb => {
+                    thumb.style.display = 'none !important';
+                });
+                
+                // 클래스 기반으로도 찾아서 숨기기
+                const possibleThumbnails = agent.querySelectorAll('[class*="thumbnail"], [class*="preview"], [class*="control"]');
+                possibleThumbnails.forEach(elem => {
+                    if (elem.id !== 'did-agent') {
+                        elem.style.cssText = `
+                            width: 100vw !important;
+                            height: 100vh !important;
+                            position: absolute !important;
+                            top: 0 !important;
+                            left: 0 !important;
+                        `;
                     }
                 });
             }
@@ -111,11 +180,20 @@
                 console.log('✅ Emma Agent 로드됨 (전체화면 모드)');
                 clearInterval(checkAgent);
                 
-                // 전체화면 적용
+                // 전체화면 적용 및 더 자주 체크
                 forceFullscreen();
                 
-                // 주기적으로 전체화면 유지 확인
-                setInterval(forceFullscreen, 1000);
+                // 매우 자주 전체화면 상태 체크 (SDK가 thumbnail 모드로 되돌리는 것을 방지)
+                setInterval(forceFullscreen, 500);
+                
+                // MutationObserver로 DOM 변화 감지하여 즉시 전체화면 적용
+                const observer = new MutationObserver(forceFullscreen);
+                observer.observe(agent, { 
+                    childList: true, 
+                    subtree: true, 
+                    attributes: true, 
+                    attributeFilter: ['style', 'class'] 
+                });
                 
                 sendToRN('agentReady', { agent: { name: 'Emma' } });
                 sendToRN('connectionStateChange', { state: 'connected' });
