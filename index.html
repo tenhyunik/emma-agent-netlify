@@ -3,7 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D-ID Agent</title>
+    <title>D-ID Agent Fullscreen</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #000;
+        }
+    </style>
 </head>
 <body>
     <script type="module"
@@ -14,7 +28,7 @@
           data-name="did-agent"
           data-monitor="true"
           data-orientation="horizontal"
-          data-position="right">
+          data-position="fullscreen">
     </script>
 </body>
 </html>
